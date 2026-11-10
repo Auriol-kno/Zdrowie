@@ -1,0 +1,18 @@
+import { chromium, serve, IPHONE } from './helpers.mjs';
+const OUT = process.argv[2] ?? '/tmp/claude-0/shots';
+const { server, url } = await serve();
+const b = await chromium.launch();
+const ctx = await b.newContext({ ...IPHONE, serviceWorkers: 'block' });
+const p = await ctx.newPage(); p.setDefaultTimeout(5000);
+await p.goto(url); await p.waitForSelector('.app');
+await p.getByRole('button', { name: 'Zaczynamy' }).click();
+const shot = async (n) => { await p.waitForTimeout(350); await p.screenshot({ path: `${OUT}/${n}.png` }); };
+await shot('20-onboarding-marble');
+for (let i = 0; i < 8; i++) await p.getByRole('button', { name: /Dalej|Utwórz plan/ }).click();
+await p.waitForSelector('.tabbar'); await shot('21-dashboard-marble');
+await p.getByText('Postawa i kręgosłup', { exact: true }).first().click();
+await p.getByRole('button', { name: 'Lordoza' }).click();
+await p.getByRole('button', { name: 'Zestaw rekomendowany' }).click(); await shot('22-posture-lordosis');
+await p.locator('.overlay .main').evaluate((m) => m.scrollTo(0, 600)); await shot('23-posture-config');
+await p.getByRole('button', { name: 'Skolioza' }).click(); await shot('24-posture-scoliosis');
+await b.close(); server.close();
