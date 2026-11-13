@@ -10,7 +10,7 @@ const errs = [];
 p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
 p.on('pageerror', (e) => errs.push('PAGEERROR ' + e.message));
 let n = 0;
-const step = async (name, fn) => { try { await fn(); console.log(`✔ ${++n}. ${name}`); } catch (e) { console.log(`✘ ${++n}. ${name}\n   ${e.message.split('\n')[0]}`); process.exitCode = 1; await p.screenshot({ path: `/tmp/claude-0/shots/fail-${n}.png` }).catch(() => {}); } };
+const step = async (name, fn) => { try { await fn(); console.log(`✔ ${++n}. ${name}`); } catch (e) { console.log(`✘ ${++n}. ${name}\n   ${e.message.split('\n')[0]}\n   ${(e.stack||'').split('\n').find(l=>l.includes('e2e.mjs'))}`); process.exitCode = 1; await p.screenshot({ path: `/tmp/claude-0/shots/fail-${n}.png` }).catch(() => {}); } };
 const idb = (store) => p.evaluate((s) => new Promise((res, rej) => { const r = indexedDB.open('formplus'); r.onsuccess = () => { const tx = r.result.transaction(s).objectStore(s).getAll(); tx.onsuccess = () => res(tx.result); tx.onerror = () => rej(tx.error); }; r.onerror = () => rej(r.error); }), store);
 const tab = (name) => p.locator('.tab', { hasText: name }).click();
 
@@ -213,6 +213,67 @@ await step('3 profile: przełączanie, osobne dane, powrót', async () => {
   await p.waitForFunction(() => document.querySelector('.profile-pill .pnum')?.textContent === '1');
   assert.ok(await p.locator('h1', { hasText: 'Tomek' }).count() >= 1);
   assert.equal((await idb('sessions')).length, before);
+});
+
+await step('menu: aktywna pozycja pomarańczowa, bez kropek w menu i w tle', async () => {
+  for (let i = 0; i < 4 && await p.locator('.overlay').count(); i++) { await p.keyboard.press('Escape'); await p.waitForTimeout(120); }
+  await tab('Mój plan');
+  const r = await p.evaluate(() => {
+    const cur = document.querySelector('.tab[aria-current="page"]');
+    const cs = getComputedStyle(cur), before = getComputedStyle(cur, '::before'), body = getComputedStyle(document.body, '::before');
+    return { bg: cs.backgroundImage, before: before.content, body: body.content, dots: document.querySelectorAll('.tab .dot').length };
+  });
+  assert.ok(r.bg.includes('rgb(255, 176, 46)') && r.bg.includes('rgb(255, 122, 0)'), r.bg);
+  assert.ok(r.before === 'none' || r.before === 'normal', 'brak kropki/paska w pozycji menu');
+  assert.ok(r.body === 'none' || r.body === 'normal', 'brak dekoracji w tle aplikacji');
+  assert.equal(r.dots, 0);
+});
+
+await step('Timery są w sekcji Ćwiczenia obok Listy, Atlasu i Programów', async () => {
+  await tab('Ćwiczenia');
+  for (const n of ['Lista', 'Atlas mięśni', 'Programy', 'Timery']) assert.ok(await p.getByRole('button', { name: n, exact: true }).count() >= 1, n);
+  await p.getByRole('button', { name: 'Timery', exact: true }).click();
+  await p.getByRole('button', { name: /Tabata/ }).click();
+  await p.getByRole('button', { name: /Przejdź do timera/ }).waitFor();
+  await p.getByRole('button', { name: 'Timery', exact: true }).last().click(); // powrót do listy trybów
+  assert.ok(await p.getByRole('button', { name: /Tabata/ }).count() >= 1);
+});
+
+await step('plan: tydzień pn–nd w dużych kafelkach z datą, przeciąganie ćwiczeń, eksport do kalendarza', async () => {
+  await tab('Mój plan');
+  const tiles = p.locator('.daytile'); assert.equal(await tiles.count(), 7);
+  const now = new Date(); const dow = (now.getDay() + 6) % 7; const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow);
+  assert.equal(Number(await tiles.nth(0).locator('.cal-day').innerText()), mon.getDate());
+  assert.equal(Number(await tiles.nth(6).locator('.cal-day').innerText()), new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6).getDate());
+  assert.equal(await p.locator('.daytile.today').count(), 1);
+  assert.equal(Number(await p.locator('.daytile.today .cal-day').innerText()), now.getDate());
+  assert.ok((await tiles.nth(0).boundingBox()).height >= 80, 'duży kafelek');
+  // eksport całego planu do kalendarza → plik .ics
+  await p.getByRole('button', { name: 'Dodaj do kalendarza' }).first().click();
+  await p.getByRole('dialog').waitFor(); await p.waitForTimeout(500);
+  const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 8000 }), p.getByRole('dialog').getByRole('button', { name: 'Dodaj do kalendarza' }).click({ noWaitAfter: true })]);
+  assert.match(dl.suggestedFilename(), /\.ics$/);
+  const ics = (await import('node:fs')).readFileSync(await dl.path(), 'utf8');
+  assert.ok(ics.startsWith('BEGIN:VCALENDAR') && ics.includes('RRULE:FREQ=WEEKLY') && ics.includes('BEGIN:VALARM'));
+  const trainingTiles = await p.locator('.daytile:not(.rest)').count();
+  assert.equal((ics.match(/BEGIN:VEVENT/g) ?? []).length, trainingTiles);
+  await p.waitForTimeout(300);
+  // przeciąganie pierwszego ćwiczenia w dół
+  await p.locator('.daytile:not(.rest)').first().click();
+  const names = () => p.locator('.overlay .list-item .bold').allInnerTexts();
+  const before = await names(); assert.ok(before.length >= 3);
+  const g0 = await p.locator('.overlay .grip').nth(0).boundingBox(); const g1 = await p.locator('.overlay .grip').nth(1).boundingBox();
+  await p.mouse.move(g0.x + g0.width / 2, g0.y + g0.height / 2); await p.mouse.down();
+  await p.mouse.move(g0.x + g0.width / 2, g0.y + g0.height / 2 + 20, { steps: 4 });
+  await p.mouse.move(g1.x + g1.width / 2, g1.y + g1.height / 2 + 20, { steps: 8 }); await p.mouse.up();
+  await p.waitForTimeout(250);
+  const after = await names();
+  assert.equal(after[1], before[0], 'pierwsze ćwiczenie przeniesione na 2. miejsce');
+  assert.equal(after[0], before[1]);
+  // strzałki nadal działają (alternatywa dla klawiatury)
+  await p.getByRole('button', { name: 'W górę' }).nth(1).click(); await p.waitForTimeout(150);
+  assert.deepEqual(await names(), before);
+  await p.getByRole('button', { name: 'Wstecz' }).click(); await p.waitForSelector('.week');
 });
 
 await step('motyw jasny i eksport JSON/CSV', async () => {

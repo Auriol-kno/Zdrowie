@@ -21,3 +21,15 @@ test('motyw „Kulki”: kontrast tekstu ≥ 4.5:1 (WCAG AA) na tle strony i kar
   assert.ok(cr('#4a2000', tok('sun-b')) >= 4.5);
   for (const f of [tok('fill-a'), tok('fill-b')]) assert.ok(cr('#062a4d', f) >= 4.5, `ciemny na ${f}`);
 });
+
+test('aktywny przycisk menu (pomarańczowy): ciemny tekst ≥ 4.5:1, pomarańcz jako tekst czytelny w każdym motywie', () => {
+  const root = css.match(/:root, :root\[data-theme="dark"\] \{([^}]*)\}/)![1];
+  const light = css.match(/:root\[data-theme="light"\] \{([^}]*)\}/)![1];
+  const get = (b: string, n: string) => b.match(new RegExp(`--${n}:\\s*(#[0-9a-fA-F]{6})`))![1];
+  for (const a of [get(root, 'act-a'), get(root, 'act-b')]) assert.ok(cr(get(root, 'on-act'), a) >= 4.5, `na-pomarańczu ${a}`);
+  assert.ok(cr(get(root, 'act-text'), '#0b2f74') >= 4.5 && cr(get(root, 'act-text'), '#101a2e') >= 4.5);
+  assert.ok(cr(get(light, 'act-text'), '#e8eef8') >= 4.5 && cr(get(light, 'act-text'), '#ffffff') >= 4.5);
+  // brak dekoracyjnych kropek w tle i w menu
+  assert.ok(!/body::before/.test(css), 'tło bez dekoracji');
+  assert.ok(!/\.tab \.dot|\.tab\[aria-current="page"\]::before/.test(css), 'menu bez kropek/pasków');
+});
