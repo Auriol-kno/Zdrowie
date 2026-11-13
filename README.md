@@ -33,7 +33,7 @@ src/
   data/      baza ćwiczeń (108 pełnych rekordów), katalog postawy, mięśnie, kształty atlasu, animacje (47), rutyny, szablony
   engine/    CZYSTA logika bez UI: generator planu, silnik treningu, timery, statystyki, progresja, silnik pozy 2D (IK)
   ui/        komponenty, wykresy SVG, Figure (animacja techniki), Atlas (mięśnie SVG)
-  screens/   Pulpit, Plan, Ćwiczenia (+karta, atlas, programy), Postawa, Trening, Timery, Postępy, Ustawienia, Onboarding
+  screens/   Pulpit, Plan, Ćwiczenia (+karta, atlas, programy, timery), Trening, Postępy, Ustawienia, Onboarding
 tests/       testy jednostkowe danych i silników
 e2e/         testy end-to-end w prawdziwej przeglądarce
 ```
@@ -76,8 +76,8 @@ Domyślny motyw (Ustawienia → Wygląd → Kulki), stylizowany na trójwymiarow
 - Wyszukiwarka i filtry (nazwa bez polskich znaków, mięsień, sprzęt, poziom, czas, miejsce); karta ćwiczenia z krokami, wskazówkami, błędami, oddechem, bezpieczeństwem, alternatywami i wynikami.
 - Atlas mięśni SVG (przód/tył, kobieta/mężczyzna jako proporcje sylwetki, 20 mięśni), dotknięcie → ćwiczenia, filtr „mój sprzęt”, dodanie do treningu/planu. Mięsień główny/pomocniczy na karcie ćwiczenia.
 - Aktywny trening: serie/powtórzenia/ciężar/czas, automatyczna przerwa, pauza, pomijanie, edycja serii, dodawanie serii/ćwiczeń, poprzedni wynik, propozycja progresji (max ~5% naraz), zakończenie z RPE/samopoczuciem/notatką/dystansem, rekordy, odzyskiwanie po odświeżeniu.
-- Timery: stoper (okrążenia), odliczanie, odpoczynek, Tabata, EMOM, AMRAP (ręczny licznik rund), interwały, rozciąganie ze zmianą strony; dźwięk/głos/wibracje opcjonalnie; prowadzona sesja stretchingu z animacją bieżącej pozycji i zapisem do historii.
-- Plan tygodnia: edycja dni, kolejność ćwiczeń, serie/powtórzenia/przerwy, kopiowanie i zamiana dni, przesunięcie planu, wiele planów (aktywny, nazwa, kopia, usuwanie), 7 szablonów, generator z zapisem parametrów i podglądem.
+- Timery (zakładka Ćwiczenia → Timery, obok Listy, Atlasu i Programów): stoper (okrążenia), odliczanie, odpoczynek, Tabata, EMOM, AMRAP (ręczny licznik rund), interwały, rozciąganie ze zmianą strony; dźwięk/głos/wibracje opcjonalnie; prowadzona sesja stretchingu z animacją bieżącej pozycji i zapisem do historii.
+- Plan tygodnia: widok pon–nd w dużych kafelkach z datą (dziś wyróżniony), eksport do kalendarza telefonu (plik .ics: cotygodniowe wydarzenia z godziną, przypomnieniem i listą ćwiczeń; późniejsze zmiany planu nie aktualizują kalendarza), edycja dni, kolejność ćwiczeń przeciąganiem (uchwyt ⋮⋮) lub strzałkami, serie/powtórzenia/przerwy, kopiowanie i zamiana dni, przesunięcie planu, wiele planów (aktywny, nazwa, kopia, usuwanie), 7 szablonów, generator z zapisem parametrów i podglądem.
 - Postępy: wykresy tygodniowe (treningi, objętość, serie, czas, mobilność), regularność (heatmapa), rekordy, historia ćwiczenia, historia treningów, własne pomiary zakresu ruchu (czas rozciągania nie jest traktowany jako miara elastyczności).
 - Dane: eksport JSON (pełna kopia) i CSV, import z walidacją, reset planów, usunięcie wszystkich danych.
 - PWA: manifest, ikony (w tym maskable), service worker z precache, działanie offline (test e2e).

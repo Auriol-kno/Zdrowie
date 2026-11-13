@@ -134,6 +134,14 @@ export const EN: Record<string, string> = {
   'Rozciągaj do wyraźnego, ale komfortowego napięcia — nigdy do bólu. Pozycje statyczne utrzymuj 20–40 s, dynamiczne wykonuj płynnie.': 'Stretch to a clear but comfortable tension — never to pain. Hold static positions for 20–40 s, do dynamic ones smoothly.',
   'Rozciągaj bez bólu': 'Stretch without pain',
   'Nie rozciągaj zimnych mięśni — zacznij od krótkiej rozgrzewki. Przy ostrym bólu, drętwieniu lub mrowieniu przerwij ćwiczenie. Przy kontuzji skonsultuj się z lekarzem lub fizjoterapeutą.': 'Do not stretch cold muscles — start with a short warm-up. Stop on sharp pain, numbness or tingling. With an injury, see a doctor or physiotherapist.',
+  // kalendarz, tydzień, przeciąganie
+  'Dodaj do kalendarza': 'Add to calendar', 'Dodaj ten dzień do kalendarza': 'Add this day to calendar', 'Godzina rozpoczęcia': 'Start time',
+  'Pobrano plik kalendarza — otwórz go, aby dodać wydarzenia': 'Calendar file downloaded — open it to add the events',
+  'Powtarzaj przez': 'Repeat for', 'Przypomnienie': 'Reminder',
+  'Przeciągnij, aby zmienić kolejność (albo użyj strzałek)': 'Drag to reorder (or use the arrows)',
+  'Tydzień od poniedziałku do niedzieli': 'Week from Monday to Sunday', 'tyg.': 'wk',
+  'Zostanie utworzony plik .ics, który otworzy się w Kalendarzu telefonu (iPhone, Android) albo w programie pocztowym. Późniejsze zmiany planu w aplikacji nie aktualizują wydarzeń w kalendarzu — wyeksportuj plan ponownie.': 'An .ics file will be created that opens in your phone calendar (iPhone, Android) or mail app. Later changes to the plan in the app do not update calendar events — export the plan again.',
+  'treningi z planu, z listą ćwiczeń w opisie.': 'workouts from the plan, with the exercise list in the description.', 'wydarzeń w tygodniu': 'events per week',
   // wspólne
   'lat': 'yrs', 'tydz.': 'wk', 'dni': 'days', 'min': 'min', 'Edytuj': 'Edit',
 };

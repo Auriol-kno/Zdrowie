@@ -1,5 +1,6 @@
 /* FORM+ — system projektowy. Ręcznie pisany CSS (zmienne → motywy ciemny/jasny). */
 :root, :root[data-theme="dark"] {
+  --act-a: #ffb02e; --act-b: #ff7a00; --on-act: #2b1200; --act-text: #ffb02e;
   --bg: #0b1220; --bg2: #101a2e; --card: #152038; --card2: #1b2a47; --line: #25365a;
   --text: #eaf0fb; --muted: #9db0d0; --faint: #8197ba;
   --teal: #2dd4bf; --teal-d: #14b8a6; --green: #4ade80; --blue: #3b82f6; --blue-l: #60a5fa;
@@ -8,6 +9,7 @@
   color-scheme: dark;
 }
 :root[data-theme="light"] {
+  --act-text: #a84400;
   --bg: #f1f5fb; --bg2: #e8eef8; --card: #ffffff; --card2: #f3f6fc; --line: #d4deef;
   --text: #0f1b33; --muted: #44587d; --faint: #566a8f;
   --teal: #0b7a70; --teal-d: #0a746b; --green: #15803d; --blue: #1d4ed8; --blue-l: #2563eb;
@@ -45,9 +47,9 @@ h3 { font-size: 16px; }
 .tabbar { display: grid; grid-template-columns: repeat(5, 1fr); background: var(--bg2); border-top: 1px solid var(--line); padding: 6px 4px calc(env(safe-area-inset-bottom) + 6px); }
 .tab { background: none; border: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; min-height: 56px; color: var(--faint); font-size: 11.5px; font-weight: 600; border-radius: 14px; position: relative; }
 .tab svg { width: 24px; height: 24px; }
-.tab[aria-current="page"] { color: var(--teal); }
-.tab[aria-current="page"]::before { content: ""; position: absolute; top: 0; width: 28px; height: 3px; border-radius: 3px; background: var(--teal); }
-.tab .dot { position: absolute; top: 6px; right: calc(50% - 20px); width: 10px; height: 10px; background: var(--warn); border-radius: 50%; border: 2px solid var(--bg2); }
+.tab[aria-current="page"] { color: var(--on-act); background: linear-gradient(135deg, var(--act-a), var(--act-b)); box-shadow: inset 0 1px 0 rgba(255,255,255,.45); }
+.tab.live:not([aria-current="page"]) { color: var(--act-text); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .overlay { position: absolute; inset: 0; background: var(--page, var(--bg)); background-color: var(--bg); z-index: 20; display: flex; flex-direction: column; animation: slide .18s ease-out; }
 @keyframes slide { from { transform: translateX(24px); opacity: .0 } to { transform: none; opacity: 1 } }
 
@@ -240,14 +242,6 @@ textarea.input { padding: 12px 14px; min-height: 90px; resize: vertical; }
   --page: radial-gradient(90% 38% at 12% -4%, rgba(255,255,255,.09), transparent 70%), linear-gradient(180deg, #0f489d 0%, #0c3a86 48%, #0a2766 100%);
   color-scheme: dark;
 }
-:root[data-theme="marble"] body::before {
-  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .8;
-  background:
-    radial-gradient(circle closest-side at 34% 30%, rgba(255,255,255,.95) 0 7%, rgba(255,255,255,.22) 8% 40%, rgba(150,210,255,.34) 41% 96%, transparent 100%) 94% 14% / 74px 74px no-repeat,
-    radial-gradient(circle closest-side at 34% 30%, rgba(255,255,255,.9) 0 7%, rgba(255,200,230,.55) 8% 40%, rgba(216,27,114,.6) 41% 96%, transparent 100%) 4% 62% / 52px 52px no-repeat,
-    radial-gradient(circle closest-side at 34% 30%, rgba(255,255,255,.9) 0 7%, rgba(255,255,255,.2) 8% 40%, rgba(150,210,255,.3) 41% 96%, transparent 100%) 90% 84% / 96px 96px no-repeat;
-}
-:root[data-theme="marble"] .app { z-index: 1; }
 :root[data-theme="marble"] .topbar .title { text-shadow: 0 2px 8px rgba(4,16,56,.5); }
 :root[data-theme="marble"] .brand { color: #fff; }
 :root[data-theme="marble"] .section-title { color: #fff; text-shadow: 0 1px 6px rgba(4,16,56,.5); }
@@ -290,10 +284,7 @@ textarea.input { padding: 12px 14px; min-height: 90px; resize: vertical; }
 :root[data-theme="marble"] .switch[aria-checked="true"] .knob::before { display: none; }
 :root[data-theme="marble"] .switch[aria-checked="true"] .knob::after { transform: translateX(27px); }
 :root[data-theme="marble"] .tabbar { margin: 0 10px calc(env(safe-area-inset-bottom) + 8px); padding: 6px 6px; background: linear-gradient(180deg, #14357a, #0c2560); border: 1px solid rgba(255,255,255,.12); border-radius: 999px; box-shadow: inset 0 2px 0 rgba(255,255,255,.12), 0 8px 18px rgba(4,16,56,.5); }
-:root[data-theme="marble"] .tab { color: var(--faint); padding-top: 14px; }
-:root[data-theme="marble"] .tab[aria-current="page"] { color: #fff; }
-:root[data-theme="marble"] .tab[aria-current="page"]::before { top: 3px; width: 12px; height: 12px; border-radius: 50%; background: var(--thumb); box-shadow: 0 0 0 3px rgba(216,27,114,.8); }
-:root[data-theme="marble"] .tab .dot { border-color: #0c2560; }
+:root[data-theme="marble"] .tab { color: var(--faint); border-radius: 999px; }
 :root[data-theme="marble"] .actionbar { background: linear-gradient(180deg, #0f2a66, #0a2766); border-top-color: rgba(255,255,255,.12); }
 :root[data-theme="marble"] .pex.on { border-color: var(--teal); }
 :root[data-theme="marble"] .pex .tick { background: #0a2766; box-shadow: inset 0 2px 5px rgba(2,10,40,.7); }
@@ -315,3 +306,22 @@ textarea.input { padding: 12px 14px; min-height: 90px; resize: vertical; }
 .grid2 > .posture-entry { padding: 12px; }
 :root[data-theme="marble"] .card.btn { border-radius: 26px; }
 .actionbar .btn.primary { min-height: 48px; }
+
+/* ——— Tydzień jak kalendarz, przeciąganie ——— */
+.weekhead { gap: 8px; flex-wrap: wrap; }
+.week { display: grid; gap: 10px; }
+.daytile { min-height: 88px; padding: 10px 14px 10px 10px; gap: 14px; border-radius: 20px; }
+.daytile .cal { flex: none; width: 66px; height: 68px; border-radius: 16px; background: var(--card2); display: grid; place-items: center; align-content: center; line-height: 1.05; }
+.daytile .cal-wd, .daytile .cal-mo { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.daytile .cal-day { font-size: 28px; font-weight: 800; }
+.daytile .dt-title { font-size: 17px; }
+.daytile .dt-sub { color: var(--muted); }
+.daytile.rest .dt-title { color: var(--muted); font-weight: 600; }
+.daytile.today { border: 2px solid var(--act-b); }
+.daytile.today .cal { background: linear-gradient(135deg, var(--act-a), var(--act-b)); }
+.daytile.today .cal-wd, .daytile.today .cal-mo, .daytile.today .cal-day { color: var(--on-act); }
+.grip { display: grid; place-items: center; width: 36px; height: 48px; color: var(--faint); flex: none; border-radius: 10px; }
+.grip svg { width: 22px; height: 22px; }
+.dragrow { transition: transform .16s ease; position: relative; }
+.dragrow.dragging { transition: none; z-index: 5; box-shadow: 0 12px 28px rgba(0,0,0,.5); border-color: var(--act-a); }
+@media (prefers-reduced-motion: reduce) { .dragrow { transition: none; } }

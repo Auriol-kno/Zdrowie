@@ -69,8 +69,8 @@ export function App() {
       {tab === 'progress' && <ProgressScreen />}
       <nav className="tabbar" aria-label={t('Nawigacja główna')}>
         {TABS.map(({ id, pl, Icon }) => (
-          <button key={id} className="tab" aria-current={tab === id && stack.length === 0 ? 'page' : undefined} onClick={() => nav.tab(id)}>
-            <Icon />{t(pl)}{id === 'workout' && draft && <span className="dot" aria-label={t('Trening w toku')} />}
+          <button key={id} className={`tab${id === 'workout' && draft ? ' live' : ''}`} aria-current={tab === id && stack.length === 0 ? 'page' : undefined} onClick={() => nav.tab(id)}>
+            <Icon />{t(pl)}{id === 'workout' && draft && <span className="sr">{t('Trening w toku')}</span>}
           </button>
         ))}
       </nav>
