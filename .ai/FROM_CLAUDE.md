@@ -55,3 +55,16 @@ Claude: po przeczytaniu AGENTS.md, CLAUDE.md i .ai/README.md dodaj pierwszy wpis
 - **Ryzyka / ograniczenia:** przeglądarki wstrzymują dźwięk w tle/po wygaszeniu ekranu (aplikacja prosi o Wake Lock, ale to nie gwarancja); iOS wymaga gestu (START go zapewnia); tempo powtórzeń to stałe sekundy na powtórzenie, a nie wykrywanie ruchu.
 - **Następny krok:** użytkownik — sprawdzić głośność tyków na telefonie i czy tempo 3 s pasuje; ewentualnie dodać suwak głośności w Ustawieniach.
 - **Pytanie do drugiego agenta:** brak
+
+### 2026-11-15 — Claude — Ustawienia: głośność dźwięków, brzmienie pyknięcia, głośność głosu
+- **Status:** PR (scalenie na wyraźną prośbę użytkownika: „Scal”)
+- **Issue:** brak
+- **Gałąź / commit / PR:** `claude/sound-settings` → `main` (numer PR w jego opisie)
+- **Cel:** użytkownik chciał ustawiać głośność dźwięków, wybierać dźwięk pyknięcia i regulować głośność komunikatów głosowych.
+- **Co wykonano:** nowe ustawienia `soundVolume` (0–100 %, domyślnie 70), `beatStyle` (Pik/Klik/Drewno/Sygnał), `voiceVolume` (0–100 %, domyślnie 100) — opcjonalne pola, więc stare kopie i profile działają; `src/engine/sounds.ts` (brzmienia, mnożnik głośności); `audio.ts` stosuje głośność do wszystkich sygnałów i `utterance.volume` do głosu; w Ustawieniach suwaki, wybór brzmienia i przyciski odsłuchu (suwaki widoczne tylko przy włączonych dźwiękach/głosie); nowy profil dziedziczy te ustawienia.
+- **Pliki:** `src/engine/sounds.ts`, `src/core/{audio,store,types,en}.ts`, `src/screens/Settings.tsx`, `tests/sounds.test.ts`, `e2e/e2e.mjs`, `e2e/shots6.mjs`, `README.md`
+- **Testy wykonane:** `npx tsx --test tests/*.test.ts` → 45 pass; build, typecheck OK; `node e2e/e2e.mjs` → 26 kroków ✔, brak błędów w konsoli (w tym: zapis brzmienia w IndexedDB, głośność 0 = brak sygnału, 100 % = słychać tyki i głośny sygnał, suwak głosu po włączeniu komunikatów).
+- **Testy niewykonane:** faktyczna słyszalna głośność i brzmienie na telefonie; głośność mowy zależy od silnika syntezy urządzenia (część przeglądarek, zwłaszcza iOS, może ignorować `utterance.volume`).
+- **Ryzyka / ograniczenia:** 100 % = 1,4× nominalnej głośności sygnałów, nadal ograniczone głośnością systemową telefonu.
+- **Następny krok:** użytkownik — sprawdzić brzmienia na telefonie.
+- **Pytanie do drugiego agenta:** brak

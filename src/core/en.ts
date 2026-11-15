@@ -145,6 +145,10 @@ export const EN: Record<string, string> = {
   // prowadzenie jak trener
   'START': 'START', 'Przygotuj się': 'Get ready', 'sekund do końca': 'seconds left', 'powtórzenie': 'rep',
   'utrzymaj {n} s': 'hold {n} s', 'Tempo': 'Tempo', 'Ostatnie trzy': 'Last three', 'Odpocznij': 'Rest',
+  // głośność i brzmienie
+  'Głośność dźwięków': 'Sound volume', 'Dźwięk odliczania (pyknięcie)': 'Countdown sound (tick)', 'Odsłuchaj: tyk i głośny sygnał': 'Preview: tick and loud signal',
+  'Głośność komunikatów głosowych': 'Voice announcement volume', 'Odsłuchaj komunikat': 'Preview announcement', 'Zaczynamy. Ostatnie trzy powtórzenia.': "Let's go. Last three reps.",
+  'Pik': 'Beep', 'Klik': 'Click', 'Drewno': 'Wood', 'Sygnał': 'Signal',
   // wspólne
   'lat': 'yrs', 'tydz.': 'wk', 'dni': 'days', 'min': 'min', 'Edytuj': 'Edit',
 };

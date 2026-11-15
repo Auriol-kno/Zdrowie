@@ -310,6 +310,26 @@ await step('trener: START → 3-2-1 → licznik; delikatne tyki, głośniejsze o
   await p.waitForSelector('text=Szybki start');
 });
 
+await step('ustawienia: wybór brzmienia pyknięcia, głośność dźwięków (0 = cisza) i głosu', async () => {
+  await tab('Pulpit'); await p.getByLabel('Ustawienia i profil').click();
+  await p.getByLabel('Głośność dźwięków').waitFor();
+  await p.getByRole('button', { name: 'Drewno', exact: true }).click(); await p.waitForTimeout(1200);
+  assert.equal((await idb('kv')).find((x) => x.beatStyle)?.beatStyle, 'wood');
+  await p.evaluate(() => { window.__beeps = []; });
+  const setRange = (label, v) => p.getByLabel(label).evaluate((el, val) => { const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(el, String(val)); el.dispatchEvent(new Event('input', { bubbles: true })); }, v);
+  await setRange('Głośność dźwięków', 0); await p.waitForTimeout(300);
+  await p.getByRole('button', { name: /Odsłuchaj: tyk/ }).click(); await p.waitForTimeout(1300);
+  assert.equal((await p.evaluate(() => window.__beeps)).length, 0, 'głośność 0 = brak dźwięku');
+  await setRange('Głośność dźwięków', 100); await p.waitForTimeout(300);
+  await p.getByRole('button', { name: /Odsłuchaj: tyk/ }).click(); await p.waitForTimeout(1300);
+  assert.ok((await p.evaluate(() => window.__beeps)).length >= 3, 'tyki i głośny sygnał słychać');
+  // głos: suwak pojawia się po włączeniu komunikatów
+  assert.equal(await p.getByLabel('Głośność komunikatów głosowych').count(), 0);
+  await p.getByRole('switch', { name: /Komunikaty głosowe/ }).click().catch(async () => { await p.getByText('Komunikaty głosowe').click(); });
+  await p.getByLabel('Głośność komunikatów głosowych').waitFor();
+  await p.getByRole('button', { name: 'Wstecz' }).click().catch(() => {});
+});
+
 await step('motyw jasny i eksport JSON/CSV', async () => {
   for (let i = 0; i < 4 && await p.locator('.overlay').count(); i++) { await p.keyboard.press('Escape'); await p.waitForTimeout(120); }
   await tab('Pulpit'); await p.getByLabel('Ustawienia i profil').click();
