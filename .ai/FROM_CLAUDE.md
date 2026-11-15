@@ -18,3 +18,16 @@ Claude: po przeczytaniu AGENTS.md, CLAUDE.md i .ai/README.md dodaj pierwszy wpis
 - **Ryzyka / ograniczenia:** .ics to jednorazowy eksport — późniejsze zmiany planu nie aktualizują kalendarza (aplikacja o tym informuje); czas zdarzeń „pływający” (lokalny). Ten wpis i PR #2 (pierwszy raport, docs) dotykają tego samego pliku — możliwy konflikt przy scalaniu PR #2.
 - **Następny krok:** użytkownik — sprawdzić eksport kalendarza i przeciąganie na telefonie; Claude — zaktualizować `.ai/TASKS.md` i decyzję D-004 po decyzji użytkownika (PR #1 jest już scalony). Propozycja UX V2 (docs/FORMPLUS_UX_V2_PROPOSAL.md) nie została wdrożona.
 - **Pytanie do drugiego agenta:** brak
+
+### 2026-11-15 — Claude — trener: tyki odliczania, głośniejsze ostatnie 3, duży START → licznik, kompaktowy ekran treningu
+- **Status:** PR (scalenie na wyraźną prośbę użytkownika: „Scal”)
+- **Issue:** brak
+- **Gałąź / commit / PR:** `claude/coach-beeps-compact` → `main` (numer PR w jego opisie)
+- **Cel:** każde odliczanie/powtórzenie sygnalizowane delikatnym tykiem, ostatnie 3 s i 3 powtórzenia głośniej; prowadzenie jak trener; bardziej kompaktowy ekran z dużym START zamieniającym się w licznik.
+- **Co wykonano:** `src/engine/coach.ts` (czysta logika: przygotowanie 3-2-1, jednostki czasu/powtórzeń, `beatLevel`); `cue('beat'|'prep'|'beatLoud')` w `src/core/audio.ts` (tyk gain 0,06; głośny 0,5 + wibracja 35 ms); `Workout.tsx`: duży przycisk START → odliczanie → licznik sekund albo „powtórzenie n/N” (tempo 2–5 s lub czas utrzymania z ćwiczenia), automatyczne zakończenie serii, głos „Zaczynamy / Ostatnie trzy / Odpocznij, następne: …” (tylko gdy włączony głos), ostatnie 3 s przerwy także głośniejsze; zwarta karta ćwiczenia (technika i szczegóły w jednym rzędzie, poprzednio/propozycja w jednej linii). Ręczne „Zakończ serię” i edycja serii zostają.
+- **Pliki:** `src/engine/coach.ts`, `src/core/audio.ts`, `src/screens/Workout.tsx`, `src/styles.css`, `src/core/en.ts`, `tests/coach.test.ts`, `e2e/e2e.mjs`, `e2e/shots5.mjs`, `README.md`
+- **Testy wykonane:** `npx tsx --test tests/*.test.ts` → 43 pass; `node build.mjs` OK; typecheck (z filtrem znanych szumów) bez błędów; `node e2e/e2e.mjs` → 25 kroków ✔, brak błędów w konsoli, w tym nowy krok: START → 3-2-1 → licznik, delikatne i głośne sygnały (pomiar głośności w AudioContext), automatyczne zakończenie serii. Krok startu treningu w e2e nie zakładał dnia odpoczynku (w niedzielę pulpit nie ma „Rozpocznij”) — poprawione.
+- **Testy niewykonane:** brzmienie i głośność na prawdziwym telefonie (głośnik, tryb cichy iOS); działanie z wygaszonym ekranem. Sprawdzono tylko liczbę i amplitudy sygnałów w Chromium.
+- **Ryzyka / ograniczenia:** przeglądarki wstrzymują dźwięk w tle/po wygaszeniu ekranu (aplikacja prosi o Wake Lock, ale to nie gwarancja); iOS wymaga gestu (START go zapewnia); tempo powtórzeń to stałe sekundy na powtórzenie, a nie wykrywanie ruchu.
+- **Następny krok:** użytkownik — sprawdzić głośność tyków na telefonie i czy tempo 3 s pasuje; ewentualnie dodać suwak głośności w Ustawieniach.
+- **Pytanie do drugiego agenta:** brak

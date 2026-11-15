@@ -142,6 +142,9 @@ export const EN: Record<string, string> = {
   'Tydzień od poniedziałku do niedzieli': 'Week from Monday to Sunday', 'tyg.': 'wk',
   'Zostanie utworzony plik .ics, który otworzy się w Kalendarzu telefonu (iPhone, Android) albo w programie pocztowym. Późniejsze zmiany planu w aplikacji nie aktualizują wydarzeń w kalendarzu — wyeksportuj plan ponownie.': 'An .ics file will be created that opens in your phone calendar (iPhone, Android) or mail app. Later changes to the plan in the app do not update calendar events — export the plan again.',
   'treningi z planu, z listą ćwiczeń w opisie.': 'workouts from the plan, with the exercise list in the description.', 'wydarzeń w tygodniu': 'events per week',
+  // prowadzenie jak trener
+  'START': 'START', 'Przygotuj się': 'Get ready', 'sekund do końca': 'seconds left', 'powtórzenie': 'rep',
+  'utrzymaj {n} s': 'hold {n} s', 'Tempo': 'Tempo', 'Ostatnie trzy': 'Last three', 'Odpocznij': 'Rest',
   // wspólne
   'lat': 'yrs', 'tydz.': 'wk', 'dni': 'days', 'min': 'min', 'Edytuj': 'Edit',
 };
