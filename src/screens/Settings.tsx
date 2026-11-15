@@ -4,8 +4,9 @@ import { buildBackup, eraseEverything, importBackup, nav, resetPlans, saveProfil
 import { t } from '../core/i18n';
 import { EX_BY_ID } from '../data/exercises';
 import { EQUIPMENT, GOALS, LEVELS } from '../data/muscles';
-import { vibrationSupported, wakeLockSupported } from '../core/audio';
-import { Card, Chip, Confirm, Section, Seg, Stepper, Switch, TopBar, download } from '../ui/components';
+import { cue, speak, unlockAudio, vibrationSupported, wakeLockSupported } from '../core/audio';
+import { BEAT_STYLES, type BeatStyle } from '../engine/sounds';
+import { Card, Chip, Confirm, Section, Seg, Slider, Stepper, Switch, TopBar, download } from '../ui/components';
 import { IDownload, IShield, ITrash, IUpload, IOffline } from '../ui/icons';
 import { dateKey } from '../core/time';
 import { ProfileSheet } from '../ui/ProfileSwitcher';
@@ -21,6 +22,7 @@ export function SettingsScreen() {
   const [switcher, setSwitcher] = useState(false);
   const file = useRef<HTMLInputElement>(null);
   const set = saveSettings;
+  const previewBeat = () => { unlockAudio(); cue('beat'); setTimeout(() => cue('beat'), 350); setTimeout(() => cue('beatLoud'), 800); };
 
   const exportJson = () => { download(`formplus-${dateKey()}.json`, JSON.stringify(buildBackup(getState()), null, 1), 'application/json'); nav.toast(t('Wyeksportowano kopię zapasową')); };
   const exportCsv = () => { download(`formplus-historia-${dateKey()}.csv`, '﻿' + sessionsToCsv(getState().sessions, (id) => EX_BY_ID[id]?.pl ?? id), 'text/csv;charset=utf-8'); };
@@ -58,8 +60,22 @@ export function SettingsScreen() {
         <Section title={t('Trening i timery')}>
           <Card>
             <Switch checked={settings.sound} onChange={(v) => void set({ sound: v })} label={t('Dźwięki')} />
+            {settings.sound && (
+              <div className="stack sm" style={{ padding: '4px 0 8px' }}>
+                <Slider label={t('Głośność dźwięków')} value={settings.soundVolume ?? 70} min={0} max={100} step={5} unit="%" onChange={(v) => void set({ soundVolume: v })} />
+                <div className="field"><label>{t('Dźwięk odliczania (pyknięcie)')}</label>
+                  <Seg value={settings.beatStyle ?? 'soft'} onChange={(v: BeatStyle) => { void set({ beatStyle: v }).then(() => previewBeat()); }} options={BEAT_STYLES.map((b) => ({ v: b.id, label: t(b.pl) }))} /></div>
+                <button className="btn sm" onClick={previewBeat}>{t('Odsłuchaj: tyk i głośny sygnał')}</button>
+              </div>
+            )}
             <Switch checked={settings.vibrate} onChange={(v) => void set({ vibrate: v })} label={t('Wibracje')} sub={vibrationSupported() ? undefined : t('Niedostępne w tej przeglądarce (np. iOS Safari)')} />
             <Switch checked={settings.voice} onChange={(v) => void set({ voice: v })} label={t('Komunikaty głosowe')} sub={t('Syntezator mowy urządzenia')} />
+            {settings.voice && (
+              <div className="stack sm" style={{ padding: '4px 0 8px' }}>
+                <Slider label={t('Głośność komunikatów głosowych')} value={settings.voiceVolume ?? 100} min={0} max={100} step={5} unit="%" onChange={(v) => void set({ voiceVolume: v })} />
+                <button className="btn sm" onClick={() => { unlockAudio(); speak(t('Zaczynamy. Ostatnie trzy powtórzenia.')); }}>{t('Odsłuchaj komunikat')}</button>
+              </div>
+            )}
             <Switch checked={settings.autoRest} onChange={(v) => void set({ autoRest: v })} label={t('Automatyczna przerwa po serii')} />
             <p className="tiny faint">{wakeLockSupported() ? t('Ekran nie wygaśnie podczas treningu i timerów.') : t('Ta przeglądarka nie pozwala blokować wygaszania ekranu — ustaw dłuższe wygaszanie w systemie.')} {t('Przeglądarki wstrzymują aplikacje w tle; timer pokaże poprawny czas po powrocie, ale dźwięk w tle nie jest gwarantowany.')}</p>
           </Card>

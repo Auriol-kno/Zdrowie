@@ -1,0 +1,11 @@
+import { chromium, serve, IPHONE } from './helpers.mjs';
+const { server, url } = await serve();
+const b = await chromium.launch(); const ctx = await b.newContext({ ...IPHONE, serviceWorkers: 'block' });
+const p = await ctx.newPage(); p.setDefaultTimeout(5000);
+await p.goto(url); await p.waitForSelector('.app');
+await p.getByRole('button', { name: 'Zaczynamy' }).click(); await p.getByLabel('Imię (opcjonalnie)').fill('Tomek');
+for (let i = 0; i < 8; i++) await p.getByRole('button', { name: /Dalej|Utwórz plan/ }).click();
+await p.waitForSelector('.tabbar'); await p.getByLabel('Ustawienia i profil').click();
+await p.getByLabel('Głośność dźwięków').scrollIntoViewIfNeeded(); await p.getByText('Komunikaty głosowe').click(); await p.waitForTimeout(500);
+await p.screenshot({ path: '/tmp/claude-0/shots/60-sound-settings.png' });
+await b.close(); server.close();

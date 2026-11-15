@@ -201,6 +201,9 @@ export interface Settings {
   sound: boolean;
   vibrate: boolean;
   voice: boolean;
+  soundVolume?: number; // 0–100 %, domyślnie 70
+  beatStyle?: 'soft' | 'click' | 'wood' | 'beep'; // brzmienie tyknięcia odliczania
+  voiceVolume?: number; // 0–100 %, domyślnie 100
   autoRest: boolean;
   defaultRest: number;
   activePlanId: string | null;

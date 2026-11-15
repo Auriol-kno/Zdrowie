@@ -32,7 +32,7 @@ export interface State {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  theme: 'marble', lang: 'pl', sound: true, vibrate: true, voice: false, autoRest: true, defaultRest: 60, activePlanId: null, onboarded: false,
+  theme: 'marble', lang: 'pl', sound: true, vibrate: true, voice: false, soundVolume: 70, beatStyle: 'soft', voiceVolume: 100, autoRest: true, defaultRest: 60, activePlanId: null, onboarded: false,
 };
 
 let state: State = {
@@ -102,7 +102,7 @@ export async function switchProfile(n: number) {
   await init({ restoreSlot: false });
   if (!state.settings.onboarded && !state.profile) {
     // nowy, pusty profil: zacznij od wyglądu i języka poprzedniego
-    await saveSettings({ theme: prev.theme, lang: prev.lang, sound: prev.sound, vibrate: prev.vibrate, voice: prev.voice });
+    await saveSettings({ theme: prev.theme, lang: prev.lang, sound: prev.sound, vibrate: prev.vibrate, voice: prev.voice, soundVolume: prev.soundVolume, beatStyle: prev.beatStyle, voiceVolume: prev.voiceVolume });
   }
 }
 

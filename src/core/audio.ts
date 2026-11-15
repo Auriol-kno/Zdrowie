@@ -2,6 +2,7 @@
 // Ograniczenia PWA na iOS: audio wymaga gestu użytkownika, a timery w tle są wstrzymywane przez system —
 // dlatego timery liczą czas z zegara (Date.now) i "doganiają" po powrocie, a dźwięk jest zapowiadany tylko przy aktywnym ekranie.
 import { getState } from './store';
+import { beatNotes, volumeGain } from '../engine/sounds';
 
 let ctx: AudioContext | null = null;
 let wakeLock: { release: () => Promise<void> } | null = null;
@@ -15,11 +16,13 @@ export function unlockAudio() {
   } catch { /* brak audio */ }
 }
 
-function tone(freq: number, ms: number, when = 0, gain = 0.18) {
+function tone(freq: number, ms: number, when = 0, gain = 0.18, type: OscillatorType = 'sine') {
   if (!ctx) return;
+  gain *= volumeGain(getState().settings.soundVolume);
+  if (gain <= 0.0001) return;
   const o = ctx.createOscillator();
   const g = ctx.createGain();
-  o.type = 'sine'; o.frequency.value = freq;
+  o.type = type; o.frequency.value = freq;
   const t0 = ctx.currentTime + when;
   g.gain.setValueAtTime(0.0001, t0);
   g.gain.exponentialRampToValueAtTime(gain, t0 + 0.01);
@@ -35,9 +38,9 @@ export function cue(kind: Cue) {
   if (s.sound) {
     if (kind === 'tick') tone(660, 90);
     // prowadzenie: delikatne tyknięcie na każdą sekundę/powtórzenie, wyraźnie głośniejszy sygnał na końcu
-    if (kind === 'beat') tone(520, 45, 0, 0.06);
+    if (kind === 'beat') beatNotes(s.beatStyle ?? 'soft', false).forEach((n) => tone(n.freq, n.ms, 0, n.gain, n.type));
     if (kind === 'prep') tone(700, 70, 0, 0.14);
-    if (kind === 'beatLoud') { tone(980, 110, 0, 0.5); tone(1470, 70, 0, 0.22); }
+    if (kind === 'beatLoud') beatNotes(s.beatStyle ?? 'soft', true).forEach((n) => tone(n.freq, n.ms, 0, n.gain, n.type));
     if (kind === 'go') { tone(880, 140); tone(1320, 200, 0.16); }
     if (kind === 'rest') { tone(520, 160); tone(400, 220, 0.18); }
     if (kind === 'done') { tone(660, 150); tone(880, 150, 0.17); tone(1175, 280, 0.34); }
@@ -53,6 +56,7 @@ export function speak(text: string) {
   try {
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
+    u.volume = Math.max(0, Math.min(1, (s.voiceVolume ?? 100) / 100));
     u.lang = s.lang === 'en' ? 'en-US' : 'pl-PL';
     window.speechSynthesis.speak(u);
   } catch { /* brak mowy */ }
