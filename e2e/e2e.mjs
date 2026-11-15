@@ -10,7 +10,7 @@ const errs = [];
 p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
 p.on('pageerror', (e) => errs.push('PAGEERROR ' + e.message));
 let n = 0;
-const step = async (name, fn) => { try { await fn(); console.log(`✔ ${++n}. ${name}`); } catch (e) { console.log(`✘ ${++n}. ${name}\n   ${e.message.split('\n')[0]}`); process.exitCode = 1; await p.screenshot({ path: `/tmp/claude-0/shots/fail-${n}.png` }).catch(() => {}); } };
+const step = async (name, fn) => { try { await fn(); console.log(`✔ ${++n}. ${name}`); } catch (e) { console.log(`✘ ${++n}. ${name}\n   ${e.message.split('\n')[0]}\n   ${(e.stack||'').split('\n').find(l=>l.includes('e2e.mjs'))}`); process.exitCode = 1; await p.screenshot({ path: `/tmp/claude-0/shots/fail-${n}.png` }).catch(() => {}); } };
 const idb = (store) => p.evaluate((s) => new Promise((res, rej) => { const r = indexedDB.open('formplus'); r.onsuccess = () => { const tx = r.result.transaction(s).objectStore(s).getAll(); tx.onsuccess = () => res(tx.result); tx.onerror = () => rej(tx.error); }; r.onerror = () => rej(r.error); }), store);
 const tab = (name) => p.locator('.tab', { hasText: name }).click();
 
@@ -34,7 +34,10 @@ await step('dane przetrwają przeładowanie (IndexedDB)', async () => {
 });
 
 await step('start treningu z pulpitu + wykonanie serii', async () => {
-  await p.getByRole('button', { name: /Rozpocznij/ }).first().click();
+  // w dni odpoczynku (np. niedziela) pulpit nie ma przycisku „Rozpocznij” — wtedy startujemy inny dzień planu z zakładki Trening
+  const startBtn = p.getByRole('button', { name: /Rozpocznij/ }).first();
+  if (await startBtn.count()) await startBtn.click();
+  else { await tab('Trening'); await p.locator('.list-item', { hasText: /ćwiczeń · ok\./ }).first().click(); }
   await p.waitForSelector('text=Seria 1 z');
   const title = await p.locator('.card h2').first().textContent();
   await p.getByRole('button', { name: /Zakończ serię|Oznacz jako wykonane/ }).click();
@@ -166,7 +169,7 @@ await step('kręgosłup: wybór ćwiczeń, konfiguracja serii/czasu i start sesj
   await p.getByRole('button', { name: 'Rozpocznij sesję' }).click();
   await p.waitForSelector('text=Seria 1 z');
   assert.ok(await p.locator('h2', { hasText: 'Stanie przy ścianie' }).count() === 1);
-  assert.ok(await p.locator('text=Start 45 s').count() >= 1);
+  assert.ok(await p.locator('.coachbtn', { hasText: 'START' }).filter({ hasText: '45 s' }).count() === 1);
   await p.getByRole('button', { name: 'Porzuć', exact: true }).click(); await p.getByRole('button', { name: 'Porzuć trening' }).click();
 });
 
@@ -213,6 +216,98 @@ await step('3 profile: przełączanie, osobne dane, powrót', async () => {
   await p.waitForFunction(() => document.querySelector('.profile-pill .pnum')?.textContent === '1');
   assert.ok(await p.locator('h1', { hasText: 'Tomek' }).count() >= 1);
   assert.equal((await idb('sessions')).length, before);
+});
+
+await step('menu: aktywna pozycja pomarańczowa, bez kropek w menu i w tle', async () => {
+  for (let i = 0; i < 4 && await p.locator('.overlay').count(); i++) { await p.keyboard.press('Escape'); await p.waitForTimeout(120); }
+  await tab('Mój plan');
+  const r = await p.evaluate(() => {
+    const cur = document.querySelector('.tab[aria-current="page"]');
+    const cs = getComputedStyle(cur), before = getComputedStyle(cur, '::before'), body = getComputedStyle(document.body, '::before');
+    return { bg: cs.backgroundImage, before: before.content, body: body.content, dots: document.querySelectorAll('.tab .dot').length };
+  });
+  assert.ok(r.bg.includes('rgb(255, 176, 46)') && r.bg.includes('rgb(255, 122, 0)'), r.bg);
+  assert.ok(r.before === 'none' || r.before === 'normal', 'brak kropki/paska w pozycji menu');
+  assert.ok(r.body === 'none' || r.body === 'normal', 'brak dekoracji w tle aplikacji');
+  assert.equal(r.dots, 0);
+});
+
+await step('Timery są w sekcji Ćwiczenia obok Listy, Atlasu i Programów', async () => {
+  await tab('Ćwiczenia');
+  for (const n of ['Lista', 'Atlas mięśni', 'Programy', 'Timery']) assert.ok(await p.getByRole('button', { name: n, exact: true }).count() >= 1, n);
+  await p.getByRole('button', { name: 'Timery', exact: true }).click();
+  await p.getByRole('button', { name: /Tabata/ }).click();
+  await p.getByRole('button', { name: /Przejdź do timera/ }).waitFor();
+  await p.getByRole('button', { name: 'Timery', exact: true }).last().click(); // powrót do listy trybów
+  assert.ok(await p.getByRole('button', { name: /Tabata/ }).count() >= 1);
+});
+
+await step('plan: tydzień pn–nd w dużych kafelkach z datą, przeciąganie ćwiczeń, eksport do kalendarza', async () => {
+  await tab('Mój plan');
+  const tiles = p.locator('.daytile'); assert.equal(await tiles.count(), 7);
+  const now = new Date(); const dow = (now.getDay() + 6) % 7; const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow);
+  assert.equal(Number(await tiles.nth(0).locator('.cal-day').innerText()), mon.getDate());
+  assert.equal(Number(await tiles.nth(6).locator('.cal-day').innerText()), new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6).getDate());
+  assert.equal(await p.locator('.daytile.today').count(), 1);
+  assert.equal(Number(await p.locator('.daytile.today .cal-day').innerText()), now.getDate());
+  assert.ok((await tiles.nth(0).boundingBox()).height >= 80, 'duży kafelek');
+  // eksport całego planu do kalendarza → plik .ics
+  await p.getByRole('button', { name: 'Dodaj do kalendarza' }).first().click();
+  await p.getByRole('dialog').waitFor(); await p.waitForTimeout(500);
+  const [dl] = await Promise.all([p.waitForEvent('download', { timeout: 8000 }), p.getByRole('dialog').getByRole('button', { name: 'Dodaj do kalendarza' }).click({ noWaitAfter: true })]);
+  assert.match(dl.suggestedFilename(), /\.ics$/);
+  const ics = (await import('node:fs')).readFileSync(await dl.path(), 'utf8');
+  assert.ok(ics.startsWith('BEGIN:VCALENDAR') && ics.includes('RRULE:FREQ=WEEKLY') && ics.includes('BEGIN:VALARM'));
+  const trainingTiles = await p.locator('.daytile:not(.rest)').count();
+  assert.equal((ics.match(/BEGIN:VEVENT/g) ?? []).length, trainingTiles);
+  await p.waitForTimeout(300);
+  // przeciąganie pierwszego ćwiczenia w dół
+  await p.locator('.daytile:not(.rest)').first().click();
+  const names = () => p.locator('.overlay .list-item .bold').allInnerTexts();
+  const before = await names(); assert.ok(before.length >= 3);
+  const g0 = await p.locator('.overlay .grip').nth(0).boundingBox(); const g1 = await p.locator('.overlay .grip').nth(1).boundingBox();
+  await p.mouse.move(g0.x + g0.width / 2, g0.y + g0.height / 2); await p.mouse.down();
+  await p.mouse.move(g0.x + g0.width / 2, g0.y + g0.height / 2 + 20, { steps: 4 });
+  await p.mouse.move(g1.x + g1.width / 2, g1.y + g1.height / 2 + 20, { steps: 8 }); await p.mouse.up();
+  await p.waitForTimeout(250);
+  const after = await names();
+  assert.equal(after[1], before[0], 'pierwsze ćwiczenie przeniesione na 2. miejsce');
+  assert.equal(after[0], before[1]);
+  // strzałki nadal działają (alternatywa dla klawiatury)
+  await p.getByRole('button', { name: 'W górę' }).nth(1).click(); await p.waitForTimeout(150);
+  assert.deepEqual(await names(), before);
+  await p.getByRole('button', { name: 'Wstecz' }).click(); await p.waitForSelector('.week');
+});
+
+await step('trener: START → 3-2-1 → licznik; delikatne tyki, głośniejsze ostatnie 3; koniec serii automatycznie', async () => {
+  // podsłuch dźwięku: głośności (gain) wszystkich sygnałów
+  await p.evaluate(() => {
+    window.__beeps = [];
+    const AC = window.AudioContext || window.webkitAudioContext; const orig = AC.prototype.createGain;
+    AC.prototype.createGain = function () { const g = orig.call(this); const set = g.gain.exponentialRampToValueAtTime.bind(g.gain);
+      g.gain.exponentialRampToValueAtTime = (v, t) => { if (v > 0.01) window.__beeps.push(v); return set(v, t); }; return g; };
+  });
+  await tab('Trening');
+  const startBtn = p.getByRole('button', { name: /Rozpocznij trening/ }).first();
+  if (await startBtn.count()) await startBtn.click(); else await p.locator('.list-item', { hasText: /ćwiczeń · ok\./ }).first().click();
+  await p.waitForSelector('.coachbtn');
+  assert.ok((await p.locator('.coachbtn').boundingBox()).height >= 150, 'duży przycisk START');
+  const isTime = /\bs$/.test((await p.locator('.coachbtn .sub').innerText()).trim());
+  if (isTime) await p.getByLabel('Sekundy', { exact: true }).fill('5');
+  else { await p.getByLabel('Powtórzenia', { exact: true }).fill('3'); await p.getByRole('group', { name: 'Tempo' }).getByRole('button', { name: '2 s' }).click(); }
+  await p.getByLabel('Sekundy').or(p.getByLabel('Powtórzenia', { exact: true })).first().blur().catch(() => {});
+  await p.locator('.coachbtn').click();
+  await p.waitForSelector('.coachbtn.running');
+  assert.equal((await p.locator('.coachbtn .big').innerText()).trim(), '3', 'odliczanie 3-2-1');
+  await p.waitForSelector('.coachbtn.running.last', { timeout: 12000 });
+  await p.waitForSelector('text=/Seria 2 z|\\bprzerwa\\b/', { timeout: 12000 });
+  const b = await p.evaluate(() => window.__beeps);
+  const loud = b.filter((v) => v >= 0.4).length, soft = b.filter((v) => v > 0.01 && v < 0.1).length;
+  assert.ok(loud >= 2, `głośne sygnały: ${loud} (${b.join(',')})`);
+  assert.ok(soft >= 1, `delikatne tyki: ${soft}`);
+  assert.ok(Math.max(...b) >= 5 * Math.min(...b.filter((v) => v < 0.1)), 'głośne wyraźnie głośniejsze od delikatnych');
+  await p.getByRole('button', { name: 'Porzuć', exact: true }).click(); await p.getByRole('button', { name: 'Porzuć trening' }).click();
+  await p.waitForSelector('text=Szybki start');
 });
 
 await step('motyw jasny i eksport JSON/CSV', async () => {

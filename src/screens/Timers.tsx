@@ -9,7 +9,7 @@ import { ROUTINE_BY_ID, routineMinutes, stepSeconds } from '../data/routines';
 import { dateKey, fmtClock, uid } from '../core/time';
 import { Card, Chip, Ring, Seg, Stepper, TopBar, useTick } from '../ui/components';
 import { Figure } from '../ui/Figure';
-import { IClock, IDone, IInfo, IPause, IPlay, IReset, ISkip } from '../ui/icons';
+import { IBack, IClock, IDone, IInfo, IPause, IPlay, IReset, ISkip } from '../ui/icons';
 import { startRoutineWorkout } from '../ui/actions';
 
 const MODES: { id: TimerMode; pl: string; sub: string }[] = [
@@ -114,7 +114,7 @@ export function TimerRunner({ mode, schedule, title, below, onFinish, onExit }: 
   );
 }
 
-export function TimersScreen() {
+export function TimersScreen({ embedded = false }: { embedded?: boolean } = {}) {
   const [mode, setMode] = useState<TimerMode | null>(null);
   const [cfg, setCfg] = useState({ seconds: 60, work: 40, rest: 20, rounds: 6, minutes: 10, per: 30, sides: true, positions: 4, started: false });
   const set = <K extends keyof typeof cfg>(k: K, v: (typeof cfg)[K]) => setCfg((c) => ({ ...c, [k]: v }));
@@ -131,10 +131,12 @@ export function TimersScreen() {
   const schedule = useMemo(() => (config ? buildSchedule(config) : []), [mode, cfg]);
   const info = mode ? MODES.find((m) => m.id === mode)! : null;
 
-  return (
-    <div className="overlay">
-      <TopBar title={info ? t(info.pl) : t('Timery')} onBack={mode ? () => setMode(null) : nav.pop} />
-      <div className="main stack">
+  const wrap = (children: React.ReactNode) => embedded
+    ? <div className="stack">{mode && <div className="row"><button className="btn sm" onClick={() => setMode(null)}><IBack />{t('Timery')}</button><b>{info ? t(info.pl) : ''}</b></div>}{children}</div>
+    : <div className="overlay"><TopBar title={info ? t(info.pl) : t('Timery')} onBack={mode ? () => setMode(null) : nav.pop} /><div className="main stack">{children}</div></div>;
+
+  return wrap(
+    <>
         {!mode && (<>
           <div className="grid2">{MODES.map((m) => (
             <button key={m.id} className="card btn" onClick={() => pick(m.id)} style={{ minHeight: 92 }}><div className="bold">{t(m.pl)}</div><div className="small muted">{t(m.sub)}</div></button>
@@ -175,8 +177,7 @@ export function TimersScreen() {
         {mode && cfg.started && (
           <TimerRunner key={`${mode}`} mode={mode} schedule={schedule} title={t(info!.pl)} onExit={() => set('started', false)} />
         )}
-      </div>
-    </div>
+    </>
   );
 }
 

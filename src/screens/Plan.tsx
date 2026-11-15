@@ -7,11 +7,14 @@ import { EX_BY_ID, filterExercises } from '../data/exercises';
 import { TEMPLATES, buildTemplatePlan } from '../data/templates';
 import { GENERATOR_VERSION, dayMinutes, generatePlan, newSeed } from '../engine/generator';
 import { draftFromDay } from '../engine/workout';
-import { weekdayIndex, uid } from '../core/time';
-import { Card, Chip, Confirm, Empty, Section, Seg, Sheet, Stepper, Switch, TopBar } from '../ui/components';
-import { IArrowDown, IArrowUp, ICopy, IEdit, IPlay, IPlus, IRight, ISpark, ITrash, IClose, IDone } from '../ui/icons';
+import { weekdayIndex, uid, startOfWeek, addDays } from '../core/time';
+import { buildIcs, trainingDays } from '../engine/ics';
+import { Card, Chip, Confirm, Empty, Section, Seg, Sheet, Stepper, Switch, TopBar, download } from '../ui/components';
+import { IArrowDown, IArrowUp, IGrip, ICalAdd, ICopy, IEdit, IPlay, IPlus, IRight, ISpark, ITrash, IClose, IDone } from '../ui/icons';
 import { planItemFromEx } from '../ui/actions';
 import { unlockAudio } from '../core/audio';
+import { useDragList } from '../ui/drag';
+import { moveItem } from '../engine/reorder';
 
 const KIND_LABEL: Record<DayKind, string> = { rest: 'Odpoczynek', workout: 'Trening', mobility: 'Mobilność', recovery: 'Regeneracja' };
 const LIMITS: { id: Limitation; pl: string }[] = [{ id: 'knees', pl: 'Kolana' }, { id: 'back', pl: 'Plecy' }, { id: 'shoulders', pl: 'Barki' }, { id: 'wrists', pl: 'Nadgarstki' }, { id: 'neck', pl: 'Szyja' }];
@@ -23,6 +26,9 @@ export function PlanScreen() {
   const [editDay, setEditDay] = useState<number | null>(null);
   const [view, setView] = useState<null | 'templates' | 'generator' | 'plans'>(null);
   const today = weekdayIndex(new Date());
+  const monday = startOfWeek(new Date());
+  const lang = useStore((s) => s.settings.lang);
+  const [cal, setCal] = useState<null | { days: number[] | undefined }>(null);
 
   const update = (days: PlanDay[]) => plan && void savePlan({ ...plan, days });
   const shift = (dir: 1 | -1) => plan && update(dir === 1 ? [plan.days[6], ...plan.days.slice(0, 6)] : [...plan.days.slice(1), plan.days[0]]);
@@ -39,17 +45,25 @@ export function PlanScreen() {
             action={<div className="stack sm" style={{ width: '100%' }}><button className="btn primary" onClick={() => setView('generator')}>{t('Wygeneruj plan')}</button><button className="btn" onClick={() => setView('templates')}>{t('Szablony')}</button></div>} />
         ) : (<>
           <div className="row between"><div><div className="bold">{plan.name}</div><div className="small muted">{plan.generatedFrom ? t('Wygenerowany lokalnie (reguły)') : plan.templateId ? t('Szablon') : t('Własny plan')}</div></div></div>
-          <div className="stack sm">
-            {plan.days.map((d, i) => (
-              <button key={i} className="list-item" onClick={() => setEditDay(i)} style={i === today ? { borderColor: 'var(--teal)' } : undefined}>
-                <span className="thumb bold" style={{ color: i === today ? 'var(--teal)' : 'var(--muted)' }}>{t(DAY_SHORT_PL[i])}</span>
-                <span className="grow">
-                  <div className="bold">{d.kind === 'rest' ? t('Odpoczynek') : d.title}</div>
-                  <div className="small muted">{t(DAY_NAMES_PL[i])}{d.kind !== 'rest' ? ` · ${d.items.length} ${t('ćwiczeń')} · ~${dayMinutes(d)} min` : ''}{i === today ? ` · ${t('dziś')}` : ''}</div>
-                </span>
-                <IRight style={{ color: 'var(--faint)' }} />
-              </button>
-            ))}
+          <div className="weekhead row between">
+            <div className="bold">{weekLabel(monday, lang)}</div>
+            <button className="btn sm" onClick={() => setCal({ days: undefined })} disabled={trainingDays(plan).length === 0}><ICalAdd />{t('Dodaj do kalendarza')}</button>
+          </div>
+          <div className="week" role="list" aria-label={t('Tydzień od poniedziałku do niedzieli')}>
+            {plan.days.map((d, i) => {
+              const date = addDays(monday, i); const isToday = i === today; const rest = d.kind === 'rest';
+              return (
+                <button key={i} role="listitem" className={`list-item daytile ${isToday ? 'today' : ''} ${rest ? 'rest' : ''}`} onClick={() => setEditDay(i)}
+                  aria-label={`${t(DAY_NAMES_PL[i])} ${date.getDate()} ${monthShort(date, lang)}: ${rest ? t('Odpoczynek') : d.title}${isToday ? `, ${t('dziś')}` : ''}`}>
+                  <span className="cal" aria-hidden="true"><span className="cal-wd">{t(DAY_SHORT_PL[i])}</span><span className="cal-day num">{date.getDate()}</span><span className="cal-mo">{monthShort(date, lang)}</span></span>
+                  <span className="grow">
+                    <div className="bold dt-title">{rest ? t('Odpoczynek') : d.title}</div>
+                    <div className="small dt-sub">{rest ? t(KIND_LABEL.rest) : `${t(KIND_LABEL[d.kind])} · ${d.items.length} ${t('ćwiczeń')} · ~${dayMinutes(d)} min`}{isToday ? ` · ${t('dziś')}` : ''}</div>
+                  </span>
+                  <IRight />
+                </button>
+              );
+            })}
           </div>
           <div className="grid2">
             <button className="btn sm" onClick={() => shift(-1)}>{t('← Przesuń plan o dzień')}</button>
@@ -64,9 +78,49 @@ export function PlanScreen() {
         </Section>
         <div className="tiny faint">{profile ? t('Domyślne akcenty szablonów zależą od profilu, ale każde ćwiczenie możesz dodać i zmienić ręcznie.') : ''}</div>
       </div>
+      {cal && plan && <CalendarSheet plan={plan} days={cal.days} onClose={() => setCal(null)} />}
       {view === 'templates' && <Templates onClose={() => setView(null)} />}
       {view === 'plans' && <PlansSheet onClose={() => setView(null)} />}
     </>
+  );
+}
+
+const locale = (lang: string) => (lang === 'en' ? 'en-GB' : 'pl-PL');
+const monthShort = (d: Date, lang: string) => d.toLocaleDateString(locale(lang), { month: 'short' }).replace('.', '');
+function weekLabel(monday: Date, lang: string) {
+  const sun = addDays(monday, 6);
+  const f = (d: Date) => d.toLocaleDateString(locale(lang), { day: 'numeric', month: 'long' });
+  return `${t('Ten tydzień')}: ${monday.getDate()}${monday.getMonth() === sun.getMonth() ? '' : ' ' + monthShort(monday, lang)} – ${f(sun)}`;
+}
+
+/** Eksport do kalendarza telefonu: plik .ics z powtarzanymi co tydzień wydarzeniami. */
+function CalendarSheet({ plan, days, onClose }: { plan: Plan; days: number[] | undefined; onClose: () => void }) {
+  const [time, setTime] = useState('18:00');
+  const [weeks, setWeeks] = useState(8);
+  const [rem, setRem] = useState<number>(30);
+  const n = (days ?? trainingDays(plan)).length;
+  const go = async () => {
+    const ics = buildIcs(plan, { time, weeks, reminderMin: rem === 0 ? null : rem, days });
+    const name = `formplus-${plan.name.normalize('NFD').replace(/\p{M}/gu, '').replace(/ł/g, 'l').replace(/Ł/g, 'L').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'plan'}.ics`;
+    try {
+      const file = new File([ics], name, { type: 'text/calendar' });
+      const nav_ = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+      if (nav_.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: 'FORM+' }); onClose(); return; }
+    } catch (e) { if ((e as Error)?.name === 'AbortError') return; }
+    download(name, ics, 'text/calendar;charset=utf-8');
+    nav.toast(t('Pobrano plik kalendarza — otwórz go, aby dodać wydarzenia')); onClose();
+  };
+  return (
+    <Sheet title={t('Dodaj do kalendarza')} onClose={onClose}>
+      <div className="stack">
+        <div className="small muted">{n} {t('wydarzeń w tygodniu')}: {t('treningi z planu, z listą ćwiczeń w opisie.')}</div>
+        <div className="field"><label htmlFor="caltime">{t('Godzina rozpoczęcia')}</label><input id="caltime" className="input" type="time" value={time} onChange={(e) => setTime(e.target.value || '18:00')} /></div>
+        <div className="field"><label>{t('Powtarzaj przez')}</label><Seg value={weeks} onChange={setWeeks} options={[4, 8, 12, 26].map((w) => ({ v: w, label: `${w} ${t('tyg.')}` }))} /></div>
+        <div className="field"><label>{t('Przypomnienie')}</label><Seg value={rem} onChange={setRem} options={[{ v: 0, label: t('brak') }, { v: 15, label: '15 min' }, { v: 30, label: '30 min' }, { v: 60, label: '1 h' }]} /></div>
+        <button className="btn primary big" disabled={n === 0} onClick={() => void go()}><ICalAdd />{t('Dodaj do kalendarza')}</button>
+        <p className="tiny faint">{t('Zostanie utworzony plik .ics, który otworzy się w Kalendarzu telefonu (iPhone, Android) albo w programie pocztowym. Późniejsze zmiany planu w aplikacji nie aktualizują wydarzeń w kalendarzu — wyeksportuj plan ponownie.')}</p>
+      </div>
+    </Sheet>
   );
 }
 
@@ -120,9 +174,11 @@ function DayEditor({ plan, idx, onClose }: { plan: Plan; idx: number; onClose: (
   const [pick, setPick] = useState(false);
   const [edit, setEdit] = useState<number | null>(null);
   const [target, setTarget] = useState<null | 'copy' | 'move'>(null);
+  const [calDay, setCalDay] = useState(false);
   const setDay = (d: PlanDay) => void savePlan({ ...plan, days: plan.days.map((x, i) => (i === idx ? d : x)) });
   const items = day.items;
-  const mv = (i: number, dir: -1 | 1) => { const j = i + dir; if (j < 0 || j >= items.length) return; const n = [...items]; [n[i], n[j]] = [n[j], n[i]]; setDay({ ...day, items: n }); };
+  const mv = (i: number, dir: -1 | 1) => { const j = i + dir; if (j < 0 || j >= items.length) return; setDay({ ...day, items: moveItem(items, i, j) }); };
+  const dnd = useDragList((from, to) => setDay({ ...day, items: moveItem(items, from, to) }));
 
   const apply = (to: number) => {
     const days = [...plan.days];
@@ -141,8 +197,9 @@ function DayEditor({ plan, idx, onClose }: { plan: Plan; idx: number; onClose: (
         {day.kind !== 'rest' && (<>
           <div className="small muted">~{dayMinutes(day)} min · {items.length} {t('ćwiczeń')}</div>
           <div className="stack sm">
-            {items.map((it, i) => { const e = EX_BY_ID[it.exId]; return (
-              <div key={i} className="list-item" style={{ padding: '8px 8px 8px 12px' }}>
+            {items.map((it, i) => { const e = EX_BY_ID[it.exId]; const r = dnd.row(i); return (
+              <div key={i} ref={r.ref} className={`list-item ${r.className}`} style={{ padding: '8px 8px 8px 4px', ...r.style }}>
+                <span className="grip" role="button" tabIndex={-1} aria-label={t('Przeciągnij, aby zmienić kolejność (albo użyj strzałek)')} {...dnd.handle(i)}><IGrip /></span>
                 <button className="grow" style={{ background: 'none', border: 0, textAlign: 'left', minHeight: 48 }} onClick={() => setEdit(i)}>
                   <div className="bold">{e?.pl ?? it.exId}</div>
                   <div className="small muted">{it.sets} × {it.seconds ? `${it.seconds}s` : `${it.reps?.[0]}–${it.reps?.[1]}`}{it.weight ? ` · ${it.weight} kg` : ''} · {it.rest}s{it.section === 'warmup' ? ` · ${t('rozgrzewka')}` : it.section === 'cooldown' ? ` · ${t('schłodzenie')}` : ''}</div>
@@ -157,6 +214,7 @@ function DayEditor({ plan, idx, onClose }: { plan: Plan; idx: number; onClose: (
           <button className="btn primary big" disabled={items.length === 0} onClick={() => { unlockAudio(); void setDraft(draftFromDay(day, plan.id, idx)); nav.tab('workout'); onClose(); }}><IPlay />{t('Rozpocznij ten trening')}</button>
         </>)}
         {day.kind === 'rest' && <Card className="flat small muted">{t('Dzień odpoczynku. Regeneracja jest częścią treningu — możesz zmienić go na trening lub mobilność.')}</Card>}
+        {day.kind !== 'rest' && items.length > 0 && <button className="btn block" onClick={() => setCalDay(true)}><ICalAdd />{t('Dodaj ten dzień do kalendarza')}</button>}
         <div className="grid2">
           <button className="btn sm" onClick={() => setTarget('copy')}><ICopy />{t('Kopiuj do dnia…')}</button>
           <button className="btn sm" onClick={() => setTarget('move')}>{t('Zamień z dniem…')}</button>
@@ -164,6 +222,7 @@ function DayEditor({ plan, idx, onClose }: { plan: Plan; idx: number; onClose: (
       </div>
       {pick && <Picker onClose={() => setPick(false)} onPick={(id) => { const e = EX_BY_ID[id]; setDay({ ...day, kind: day.kind === 'rest' ? 'workout' : day.kind, items: [...items, planItemFromEx(e)] }); setPick(false); }} />}
       {edit !== null && <ItemEditor item={items[edit]} onClose={() => setEdit(null)} onSave={(n) => { setDay({ ...day, items: items.map((x, i) => (i === edit ? n : x)) }); setEdit(null); }} />}
+      {calDay && <CalendarSheet plan={plan} days={[idx]} onClose={() => setCalDay(false)} />}
       {target && <Sheet title={target === 'copy' ? t('Kopiuj do…') : t('Zamień z…')} onClose={() => setTarget(null)}><div className="stack sm">{plan.days.map((d, i) => i !== idx && <button key={i} className="list-item" onClick={() => apply(i)}><span className="grow"><b>{t(DAY_NAMES_PL[i])}</b><div className="small muted">{d.kind === 'rest' ? t('Odpoczynek') : d.title}</div></span></button>)}</div></Sheet>}
     </div>
   );

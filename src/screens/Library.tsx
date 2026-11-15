@@ -5,6 +5,7 @@ import { t } from '../core/i18n';
 import { EQUIPMENT, LEVELS, MODULES, MUSCLES, MUSCLE_IDS } from '../data/muscles';
 import { EX_BY_ID, estimateSec, exercisesForMuscle, filterExercises } from '../data/exercises';
 import { ROUTINES, routineMinutes } from '../data/routines';
+import { TimersScreen } from './Timers';
 import { Card, Chip, Empty, Section, Seg, Sheet, TopBar } from '../ui/components';
 import { FigureThumb, Figure } from '../ui/Figure';
 import { AtlasLegend, MuscleMap } from '../ui/Atlas';
@@ -37,7 +38,7 @@ export function ExerciseRow({ ex, onAdd }: { ex: Exercise; onAdd?: () => void })
   );
 }
 
-type Mode = 'list' | 'atlas' | 'programs';
+type Mode = 'list' | 'atlas' | 'programs' | 'timers';
 
 export function LibraryScreen() {
   const [mode, setMode] = useState<Mode>('list');
@@ -45,10 +46,11 @@ export function LibraryScreen() {
     <>
       <TopBar title={t('Ćwiczenia')} />
       <div className="main stack">
-        <Seg value={mode} onChange={setMode} options={[{ v: 'list', label: t('Lista') }, { v: 'atlas', label: t('Atlas mięśni') }, { v: 'programs', label: t('Programy') }]} />
+        <Seg value={mode} onChange={setMode} options={[{ v: 'list', label: t('Lista') }, { v: 'atlas', label: t('Atlas mięśni') }, { v: 'programs', label: t('Programy') }, { v: 'timers', label: t('Timery') }]} />
         {mode === 'list' && <List />}
         {mode === 'atlas' && <Atlas />}
         {mode === 'programs' && <Programs />}
+        {mode === 'timers' && <TimersScreen embedded />}
       </div>
     </>
   );
