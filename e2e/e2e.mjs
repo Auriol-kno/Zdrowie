@@ -34,7 +34,10 @@ await step('dane przetrwają przeładowanie (IndexedDB)', async () => {
 });
 
 await step('start treningu z pulpitu + wykonanie serii', async () => {
-  await p.getByRole('button', { name: /Rozpocznij/ }).first().click();
+  // w dni odpoczynku (np. niedziela) pulpit nie ma przycisku „Rozpocznij” — wtedy startujemy inny dzień planu z zakładki Trening
+  const startBtn = p.getByRole('button', { name: /Rozpocznij/ }).first();
+  if (await startBtn.count()) await startBtn.click();
+  else { await tab('Trening'); await p.locator('.list-item', { hasText: /ćwiczeń · ok\./ }).first().click(); }
   await p.waitForSelector('text=Seria 1 z');
   const title = await p.locator('.card h2').first().textContent();
   await p.getByRole('button', { name: /Zakończ serię|Oznacz jako wykonane/ }).click();
@@ -166,7 +169,7 @@ await step('kręgosłup: wybór ćwiczeń, konfiguracja serii/czasu i start sesj
   await p.getByRole('button', { name: 'Rozpocznij sesję' }).click();
   await p.waitForSelector('text=Seria 1 z');
   assert.ok(await p.locator('h2', { hasText: 'Stanie przy ścianie' }).count() === 1);
-  assert.ok(await p.locator('text=Start 45 s').count() >= 1);
+  assert.ok(await p.locator('.coachbtn', { hasText: 'START' }).filter({ hasText: '45 s' }).count() === 1);
   await p.getByRole('button', { name: 'Porzuć', exact: true }).click(); await p.getByRole('button', { name: 'Porzuć trening' }).click();
 });
 
@@ -274,6 +277,37 @@ await step('plan: tydzień pn–nd w dużych kafelkach z datą, przeciąganie ć
   await p.getByRole('button', { name: 'W górę' }).nth(1).click(); await p.waitForTimeout(150);
   assert.deepEqual(await names(), before);
   await p.getByRole('button', { name: 'Wstecz' }).click(); await p.waitForSelector('.week');
+});
+
+await step('trener: START → 3-2-1 → licznik; delikatne tyki, głośniejsze ostatnie 3; koniec serii automatycznie', async () => {
+  // podsłuch dźwięku: głośności (gain) wszystkich sygnałów
+  await p.evaluate(() => {
+    window.__beeps = [];
+    const AC = window.AudioContext || window.webkitAudioContext; const orig = AC.prototype.createGain;
+    AC.prototype.createGain = function () { const g = orig.call(this); const set = g.gain.exponentialRampToValueAtTime.bind(g.gain);
+      g.gain.exponentialRampToValueAtTime = (v, t) => { if (v > 0.01) window.__beeps.push(v); return set(v, t); }; return g; };
+  });
+  await tab('Trening');
+  const startBtn = p.getByRole('button', { name: /Rozpocznij trening/ }).first();
+  if (await startBtn.count()) await startBtn.click(); else await p.locator('.list-item', { hasText: /ćwiczeń · ok\./ }).first().click();
+  await p.waitForSelector('.coachbtn');
+  assert.ok((await p.locator('.coachbtn').boundingBox()).height >= 150, 'duży przycisk START');
+  const isTime = /\bs$/.test((await p.locator('.coachbtn .sub').innerText()).trim());
+  if (isTime) await p.getByLabel('Sekundy', { exact: true }).fill('5');
+  else { await p.getByLabel('Powtórzenia', { exact: true }).fill('3'); await p.getByRole('group', { name: 'Tempo' }).getByRole('button', { name: '2 s' }).click(); }
+  await p.getByLabel('Sekundy').or(p.getByLabel('Powtórzenia', { exact: true })).first().blur().catch(() => {});
+  await p.locator('.coachbtn').click();
+  await p.waitForSelector('.coachbtn.running');
+  assert.equal((await p.locator('.coachbtn .big').innerText()).trim(), '3', 'odliczanie 3-2-1');
+  await p.waitForSelector('.coachbtn.running.last', { timeout: 12000 });
+  await p.waitForSelector('text=/Seria 2 z|\\bprzerwa\\b/', { timeout: 12000 });
+  const b = await p.evaluate(() => window.__beeps);
+  const loud = b.filter((v) => v >= 0.4).length, soft = b.filter((v) => v > 0.01 && v < 0.1).length;
+  assert.ok(loud >= 2, `głośne sygnały: ${loud} (${b.join(',')})`);
+  assert.ok(soft >= 1, `delikatne tyki: ${soft}`);
+  assert.ok(Math.max(...b) >= 5 * Math.min(...b.filter((v) => v < 0.1)), 'głośne wyraźnie głośniejsze od delikatnych');
+  await p.getByRole('button', { name: 'Porzuć', exact: true }).click(); await p.getByRole('button', { name: 'Porzuć trening' }).click();
+  await p.waitForSelector('text=Szybki start');
 });
 
 await step('motyw jasny i eksport JSON/CSV', async () => {
